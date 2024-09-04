@@ -1,0 +1,25 @@
+{
+  "name": "devsquad-cockpit",
+  "version": "1.0.0",
+  "description": "",
+  "main": "devsquadCockpit.js",
+  "scripts": {
+    "test": "jest"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/devsquad-cockpit/node.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/devsquad-cockpit/node/issues"
+  },
+  "homepage": "https://github.com/devsquad-cockpit/node#readme",
+  "devDependencies": {
+    "jest": "^29.5.0"
+  },
+  "dependencies": {
+    "dotenv": "^16.0.3"
+  }
+}
