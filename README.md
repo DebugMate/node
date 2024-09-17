@@ -69,11 +69,11 @@ try {
 ```
 ### 3. Report Context Data
 If you want to send more information to the Debugmate:<br>
-- Create `debugmateContext.js` file in the root project and create the getUser and getEnvironment methods. These methods will be called by the Debugmate to get the data you want to send.
+- Create `debugmateContext.cjs` file in the root project and create the getUser and getEnvironment methods. These methods will be called by the Debugmate to get the data you want to send.
 - Add `DEBUGMATE_CONTEXT` to your .env file with the path of the appContext.js file.<br>
 
 ```js
-// file: debugmateContext.js
+// file: debugmateContext.cjs
 
 function getUser() {
     // Retrieve user data the way you want
@@ -103,9 +103,8 @@ function getEnvironment() {
 module.exports = { getUser, getEnvironment }
 
 ```
-
 ```.env
 // file: .env
 
-DEBUGMATE_CONTEXT=/path/root/project/debugmateContext.js
+DEBUGMATE_CONTEXT=/path/root/project/debugmateContext.cjs
 ```

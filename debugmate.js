@@ -106,7 +106,7 @@ class Debugmate {
     }
 
     checkAppContext() {
-        const pathFile = this.debugmateContext || path.resolve(__dirname, '../../debugmateContext.js')
+        const pathFile = this.debugmateContext || path.resolve(__dirname, '../../debugmateContext.cjs')
 
         return fs.existsSync(pathFile)
             ? require(pathFile)
