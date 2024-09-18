@@ -1,18 +1,18 @@
-process.env.COCKPIT_DOMAIN = 'http://cockpit-app.test'
-process.env.COCKPIT_TOKEN = 'token'
-process.env.COCKPIT_ENABLED = true
+process.env.DEBUGMATE_DOMAIN = 'http://debugmate-app.test'
+process.env.DEBUGMATE_TOKEN = 'token'
+process.env.DEBUGMATE_ENABLED = true
 
 const { Context } = require('../context')
-const cockpit = require('../cockpit')
+const debugmate = require('../debugmate')
 const queryString = require('querystring')
 const appContext = require('./appContext')
 
 test('it should be able to send error', () => {
     error = new Error('This is an error')
 
-    cockpit.publish(error)
+    debugmate.publish(error)
 
-    let payload = cockpit.payload(error)
+    let payload = debugmate.payload(error)
 
     expect(payload.message).toEqual(error.message)
 })
@@ -37,9 +37,9 @@ test('it should be able to send error and request', () => {
 
     let context = new Context().setRequest(request)
 
-    cockpit.publish(error, request)
+    debugmate.publish(error, request)
 
-    let payload = cockpit.payload(error, context)
+    let payload = debugmate.payload(error, context)
 
     expect(payload.message).toEqual(error.message)
 
@@ -83,9 +83,9 @@ test('it should be able to send context', () => {
             version: 'v18.14.2'
         })
 
-    cockpit.publish(error)
+    debugmate.publish(error)
 
-    let payload = cockpit.payload(error, context)
+    let payload = debugmate.payload(error, context)
 
     expect(payload.message).toEqual(error.message)
 
@@ -158,9 +158,9 @@ test('it should be able to set appContext', () => {
             version: 'v18.14.2'
         })
 
-    cockpit.publish(error)
+    debugmate.publish(error)
 
-    let payload = cockpit.payload(error, context)
+    let payload = debugmate.payload(error, context)
 
     expect(payload.message).toEqual(error.message)
 

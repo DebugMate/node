@@ -5,7 +5,7 @@
 file: package.json
 
 "dependencies": {
-    "devsquad-cockpit": "file:<place-here-you-clone-the-repo>"
+    "debugmate": "file:<place-here-you-clone-the-repo>"
 }
 ```
 
@@ -18,43 +18,43 @@ npm install
 ```.env
 // file: .env
 
-COCKPIT_DOMAIN=http://cockpit-app.test
-COCKPIT_TOKEN=29b68285-5c46-42d0-86a8-19b0c6cd4324
-COCKPIT_ENABLED=true
+DEBUGMATE_DOMAIN=http://debugmate-app.test
+DEBUGMATE_TOKEN=29b68285-5c46-42d0-86a8-19b0c6cd4324
+DEBUGMATE_ENABLED=true
 ```
 ### 4. Add test script to `package.json`
 ```json
 // file: package.json
 
 "scripts": {
-  "cockpit:test": "node ./node_modules/devsquad-cockpit/scripts/connectionTest.js"
+  "debugmate:test": "node ./node_modules/debugmate/scripts/connectionTest.js"
 }
 ```
 
 ### 5. Run script test
-You're able to send a fake error to the Cockpit as a test by running this command:
+You're able to send a fake error to the Debugmate as a test by running this command:
 ```bash
-npm run cockpit:test
+npm run debugmate:test
 ```
 
 ## Usage
 
 ### 1. Report Errors
-In the class where you want report the error import the module and call the `cockpit.publish(error)` method
+In the class where you want report the error import the module and call the `debugmate.publish(error)` method
 ```js
-const cockpit = require('devsquad-cockpit/cockpit')
+const debugmate = require('debugmate/debugmate')
 
 try {
     // ...error producing code
 } catch (error) {
-    cockpit.publish(error)
+    debugmate.publish(error)
 }
 ```
 
-You can also report errors by calling `cockpit.publish(error)` method using `process.on('uncaughtException', (error) => {})`
+You can also report errors by calling `debugmate.publish(error)` method using `process.on('uncaughtException', (error) => {})`
 ```js
 process.on('uncaughtException', (error) => {
-    cockpit.publish(error)
+    debugmate.publish(error)
 })
 ```
 
@@ -64,16 +64,16 @@ process.on('uncaughtException', (error) => {
 try {
     // ...error producing code
 } catch (error) {
-    cockpit.publish(error, request)
+    debugmate.publish(error, request)
 }
 ```
 ### 3. Report Context Data
-If you want to send more information to the Cockpit:<br>
-- Create `cockpitContext.js` file in the root project and create the getUser and getEnvironment methods. These methods will be called by the Cockpit to get the data you want to send.
-- Add `COCKPIT_CONTEXT` to your .env file with the path of the appContext.js file.<br>
+If you want to send more information to the Debugmate:<br>
+- Create `debugmateContext.cjs` file in the root project and create the getUser and getEnvironment methods. These methods will be called by the Debugmate to get the data you want to send.
+- Add `DEBUGMATE_CONTEXT` to your .env file with the path of the appContext.js file.<br>
 
 ```js
-// file: cockpitContext.js
+// file: debugmateContext.cjs
 
 function getUser() {
     // Retrieve user data the way you want
@@ -83,7 +83,7 @@ function getUser() {
         email: 'johndoe@email.com',
     }
 
-    // Return the user data as an object to Cockpit
+    // Return the user data as an object to Debugmate
     return user
 }
 
@@ -103,9 +103,8 @@ function getEnvironment() {
 module.exports = { getUser, getEnvironment }
 
 ```
-
 ```.env
 // file: .env
 
-COCKPIT_CONTEXT=/path/root/project/cockpitContext.js
+DEBUGMATE_CONTEXT=/path/root/project/debugmateContext.cjs
 ```
