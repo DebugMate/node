@@ -31,6 +31,26 @@ class Debugmate {
         this.context.setRequest(request);
     }
 
+    setupGlobalErrorHandling() {
+
+        process.on('uncaughtException', (error) => {
+            console.error('Caught an uncaught exception:', error.message);
+            this.publish(error);
+        });
+
+        process.on('unhandledRejection', (reason) => {
+            console.error('Caught an unhandled rejection:', reason);
+
+            const error =
+                reason instanceof Error
+                    ? reason
+                    : new Error(`Unhandled rejection: ${JSON.stringify(reason)}`);
+
+            this.publish(error);
+        });
+
+    }
+
     publish(error, userContext = null, environmentContext = null, request = null) {
         try {
             if (!this.isPublishingAllowed(error)) return;
@@ -100,44 +120,55 @@ class Debugmate {
 
     trace(error) {
         const stackTrace = require('./stackTraceParser').parse(error);
-
+    
         if (!stackTrace.sources || stackTrace.sources.length === 0) {
             return [];
         }
-
-        return stackTrace.sources.map((source) => {
-            let codePreview = {};
-            let errorLine = source.line || null;
-
-            if (!source.file || source.file.startsWith('node:internal')) {
-                codePreview = { "1": "(Internal Node.js file - no preview available)" };
-            } else if (source.file && errorLine) {
-                try {
-                    const fileContent = fs.readFileSync(source.file, 'utf-8');
-                    const lines = fileContent.split('\n');
-
-                    const startLine = Math.max(0, errorLine - 5);
-                    const endLine = Math.min(lines.length, errorLine + 5);
-
-                    for (let i = startLine; i <= endLine; i++) {
-                        codePreview[i + 1] = lines[i] || null;
+    
+        const ignoredPatterns = [
+            '/debugmate.js',
+            '/node_modules/',
+            'node:internal',
+        ];
+    
+        return stackTrace.sources
+            .filter((source) => {
+                if (!source.file) return true;
+                return !ignoredPatterns.some((pattern) => source.file.includes(pattern));
+            })
+            .map((source) => {
+                let codePreview = {};
+                let errorLine = source.line || null;
+    
+                if (!source.file || source.file.startsWith('node:internal')) {
+                    codePreview = { "1": "(Internal Node.js file - no preview available)" };
+                } else if (source.file && errorLine) {
+                    try {
+                        const fileContent = fs.readFileSync(source.file, 'utf-8');
+                        const lines = fileContent.split('\n');
+    
+                        const startLine = Math.max(0, errorLine - 5);
+                        const endLine = Math.min(lines.length, errorLine + 5);
+    
+                        for (let i = startLine; i <= endLine; i++) {
+                            codePreview[i + 1] = lines[i] || null;
+                        }
+                    } catch (err) {
+                        codePreview = { "1": `(Unable to read file "${source.file}" - ${err.message})` };
                     }
-                } catch (err) {
-                    codePreview = { "1": `(Unable to read file "${source.file}" - ${err.message})` };
+                } else {
+                    codePreview = { "1": "(No file or line information available)" };
                 }
-            } else {
-                codePreview = { "1": "(No file or line information available)" };
-            }
-
-            return {
-                file: source.file,
-                line: source.line,
-                column: source.column,
-                function: source.function,
-                class: source.file,
-                preview: codePreview,
-            };
-        });
+    
+                return {
+                    file: source.file,
+                    line: source.line,
+                    column: source.column,
+                    function: source.function,
+                    class: source.file,
+                    preview: codePreview,
+                };
+            });
     }
 
 }
