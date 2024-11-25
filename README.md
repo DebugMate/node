@@ -193,20 +193,3 @@ server.listen(3000, () => {
   console.log('Server running on http://localhost:3000/');
 });
 ```
-
-## Testing DebugMate Integration
-To verify DebugMate is working, you can run a test script included in the package:
-
-### 1. Add the test script to package.json:
-
-```js
-"scripts": {
-  "debugmate:test": "node ./node_modules/debugmate/scripts/connectionTest.js"
-}
-```
-
-### 2. Run the test:
-
-```bash
-npm run debugmate:test
-```
