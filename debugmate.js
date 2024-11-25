@@ -34,13 +34,10 @@ class Debugmate {
     setupGlobalErrorHandling() {
 
         process.on('uncaughtException', (error) => {
-            console.error('Caught an uncaught exception:', error.message);
             this.publish(error);
         });
 
         process.on('unhandledRejection', (reason) => {
-            console.error('Caught an unhandled rejection:', reason);
-
             const error =
                 reason instanceof Error
                     ? reason
