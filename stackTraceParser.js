@@ -14,34 +14,34 @@ const PROJECT_ROOT = path.join(__dirname, '..');
  * @returns {string} stack - The complete stack trace as a string.
  */
 function parse(error) {
-    const stacklist = error.stack
-        .replace(/\n+/g, "\n")
-        .split("\n")
-        .filter((item, index, array) => {
-            if (!!item) {
-                return index === array.indexOf(item);
-            }
-        });
-
-    const stackReg = /at\s+(.*)\s+\((.*):(\d+):(\d+)\)/;
-    const stackReg2 = /at\s+(.*)\s+(.*):(\d+):(\d+)/;
-
-    const sources = [];
-    stacklist.forEach((item) => {
-        const sp = stackReg.exec(item) || stackReg2.exec(item);
-        if (sp && sp.length === 5) {
-            sources.push({
-                function: sp[1] || 'anonymous',
-                file: path.resolve(PROJECT_ROOT, sp[2]),
-                line: parseInt(sp[3], 10),
-                column: parseInt(sp[4], 10),
-            });
-        }
+  const stacklist = error.stack
+    .replace(/\n+/g, "\n")
+    .split("\n")
+    .filter((item, index, array) => {
+      if (!!item) {
+        return index === array.indexOf(item);
+      }
     });
 
-    const stack = stacklist.join('\n');
+  const stackReg = /at\s+(.*)\s+\((.*):(\d+):(\d+)\)/;
+  const stackReg2 = /at\s+(.*)\s+(.*):(\d+):(\d+)/;
 
-    return { sources, stack };
+  const sources = [];
+  stacklist.forEach((item) => {
+    const sp = stackReg.exec(item) || stackReg2.exec(item);
+    if (sp && sp.length === 5) {
+      sources.push({
+        function: sp[1] || 'anonymous',
+        file: path.resolve(PROJECT_ROOT, sp[2]),
+        line: parseInt(sp[3], 10),
+        column: parseInt(sp[4], 10),
+      });
+    }
+  });
+
+  const stack = stacklist.join('\n');
+
+  return { sources, stack };
 }
 
 module.exports.parse = parse;
