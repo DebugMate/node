@@ -10,21 +10,19 @@ function parse(error) {
         }
       })
 
-    let stackReg = /at\s+(.*)\s+\((.*):(\d*):(\d*)\)/gi
-    let stackReg2 = /at\s+()(.*):(\d*):(\d*)/gi
+    let stackReg = /at\s+(.*)\s+\((.*):(\d+):(\d+)\)/
+    let stackReg2 = /at\s+(.*)\s+(.*):(\d+):(\d+)/
 
     const sources = []
     stacklist.forEach((item) => {
       var sp = stackReg.exec(item) || stackReg2.exec(item)
       if (sp && sp.length === 5) {
-        sources.push(
-          {
-            function: sp[1],
-            file: path.resolve(PROJECT_ROOT, sp[2]),
-            line: 1,
-            column: sp[4],
-          }
-        )
+        sources.push({
+          function: sp[1] || 'anonymous',
+          file: path.resolve(PROJECT_ROOT, sp[2]),
+          line: parseInt(sp[3], 10),
+          column: parseInt(sp[4], 10),
+        })
       }
     })
     const stack = stacklist.join('\n')

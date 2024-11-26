@@ -50,6 +50,15 @@ const debugmate = new Debugmate({
 });
 ```
 
+## Automatic Global Error Handling
+DebugMate can automatically handle uncaught exceptions and unhandled promise rejections by setting up global error handlers. This eliminates the need to manually attach listeners to process.on for these events.
+
+You can use the setupGlobalErrorHandling method to configure these listeners:
+
+```js
+debugmate.setupGlobalErrorHandling();
+```
+
 ### Set User Context
 You can attach user information to the error reports to gain more insight into which user experienced the error.
 
@@ -192,21 +201,4 @@ const server = http.createServer((req, res) => {
 server.listen(3000, () => {
   console.log('Server running on http://localhost:3000/');
 });
-```
-
-## Testing DebugMate Integration
-To verify DebugMate is working, you can run a test script included in the package:
-
-### 1. Add the test script to package.json:
-
-```js
-"scripts": {
-  "debugmate:test": "node ./node_modules/debugmate/scripts/connectionTest.js"
-}
-```
-
-### 2. Run the test:
-
-```bash
-npm run debugmate:test
 ```
