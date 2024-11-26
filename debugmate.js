@@ -83,6 +83,7 @@ class Debugmate {
      */
     setupGlobalErrorHandling() {
         process.on('uncaughtException', (error) => {
+            console.error(error);
             this.publish(error);
         });
 
@@ -92,6 +93,7 @@ class Debugmate {
                     ? reason
                     : new Error(`Unhandled rejection: ${JSON.stringify(reason)}`);
                     
+            console.error(reason);
             this.publish(error);
         });
     }
