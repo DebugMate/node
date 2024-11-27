@@ -1,6 +1,29 @@
+# DebugMate Node.js
+
+DebugMate is an error tracking and monitoring tool designed for Node.js applications. This package allows you to capture and send error reports along with environment, user, and request context information to a remote API.
+
+#### Singleton Design Pattern
+
+The DebugMate constructor uses the Singleton pattern, ensuring that only one instance of DebugMate is created during the application’s lifecycle. Subsequent calls to the constructor return the same instance, keeping error reporting consistent throughout the application.
+
+If you need to reset or reinitialize DebugMate, you can manually reset the singleton instance like this:
+
+```js
+// Reset the instance by setting it to null
+Debugmate.instance = null;
+
+// Create a new instance
+const newDebugmate = new Debugmate({
+  domain: "https://your-new-domain.com",
+  token: "new-api-token",
+  enabled: true,
+});
+```
+
 ## Installation
 
-### 1. Add module as a local dependency(_while we're still developing_)
+
+To install DebugMate for Node.js, you can add it as a local dependency while in development:
 ```json
 file: package.json
 
@@ -9,102 +32,173 @@ file: package.json
 }
 ```
 
-### 2. Install dependencies
+Then install the package:
 ```bash
 npm install
 ```
-
-### 3. Create `.env` file in the root project if you don't have one and add the following variables
-```.env
-// file: .env
-
-DEBUGMATE_DOMAIN=http://debugmate-app.test
-DEBUGMATE_TOKEN=29b68285-5c46-42d0-86a8-19b0c6cd4324
-DEBUGMATE_ENABLED=true
-```
-### 4. Add test script to `package.json`
-```json
-// file: package.json
-
-"scripts": {
-  "debugmate:test": "node ./node_modules/debugmate/scripts/connectionTest.js"
-}
-```
-
-### 5. Run script test
-You're able to send a fake error to the Debugmate as a test by running this command:
-```bash
-npm run debugmate:test
-```
-
 ## Usage
+### Basic Setup
+To get started with DebugMate, initialize it with your API domain and token. This allows DebugMate to send error reports to your server.
 
-### 1. Report Errors
-In the class where you want report the error import the module and call the `debugmate.publish(error)` method
 ```js
-const debugmate = require('debugmate/debugmate')
+const Debugmate = require('debugmate');
 
+const debugmate = new Debugmate({
+  domain: "https://your-domain.com",
+  token: "your-api-token",
+  enabled: true, // Enable or disable error reporting
+});
+```
+
+## Automatic Global Error Handling
+DebugMate can automatically handle uncaught exceptions and unhandled promise rejections by setting up global error handlers. This eliminates the need to manually attach listeners to process.on for these events.
+
+You can use the setupGlobalErrorHandling method to configure these listeners:
+
+```js
+debugmate.setupGlobalErrorHandling();
+```
+
+### Set User Context
+You can attach user information to the error reports to gain more insight into which user experienced the error.
+
+```js
+const user = {
+  id: 123,
+  name: "John Doe",
+  email: "john@example.com",
+};
+
+debugmate.setUser(user);
+```
+
+### Set Environment Context
+You can set the environment context, including details about the application, server, and metadata.
+
+```js
+const environment = {
+  environment: "production", // 'development', 'staging', 'production', etc.
+  debug: false,
+  timezone: "UTC",
+  server: "nginx",
+  database: "mysql",
+  npm: "6.14.8",
+};
+
+debugmate.setEnvironment(environment);
+```
+
+### Set Request Context
+To include information about an HTTP request (e.g., during a REST API operation), pass the request object to DebugMate.
+
+```js
+const request = {
+  request: {
+    url: "https://your-api.com/endpoint",
+    method: "POST",
+    params: { key: "value" },
+  },
+  headers: {
+    Authorization: "Bearer token",
+    "Content-Type": "application/json",
+  },
+  query_string: { search: "query" },
+  body: JSON.stringify({ data: "payload" }),
+};
+
+debugmate.setRequest(request);
+```
+
+### Publish errors
+To manually send an error report, use the publish method. You can include optional contexts like user, environment, and request:
+```js
 try {
-    // ...error producing code
+  // Simulate code that throws an error
+  throw new Error("Something went wrong!");
 } catch (error) {
-    debugmate.publish(error)
+  debugmate.publish(error, user, environment, request);
 }
 ```
 
-You can also report errors by calling `debugmate.publish(error)` method using `process.on('uncaughtException', (error) => {})`
+### Automatic Error Handling
+You can set up global error handling for uncaught exceptions and unhandled promise rejections:
+
 ```js
 process.on('uncaughtException', (error) => {
-    debugmate.publish(error)
-})
+  debugmate.publish(error);
+});
+
+process.on('unhandledRejection', (reason) => {
+  debugmate.publish(reason);
+});
 ```
 
-### 2. Report Errors and Request Data
+
+## API Reference
+
+### DebugMate Constructor
+
+- **domain:** The API endpoint to which errors are sent (required).
+
+- **token:** The API token used for authentication (required).
+
+- **enabled:** Boolean flag to enable or disable error reporting (optional, default: true).
+
+### Methods
+
+- **setUser(user):** Attach user information to the error report.
+
+- **setEnvironment(environment):** Set environment metadata such as app version, server info, etc.
+
+- **setRequest(request):** Attach details about the current HTTP request to the error report.
+
+- **publish(error, userContext = null, environmentContext = null, requestContext = null):** Send an error report to the API.
+
+
+## Example Server with DebugMate
+Here’s how you can integrate DebugMate into a Node.js HTTP server:
+
 ```js
-//Some method that throws an error and has a request object
-try {
-    // ...error producing code
-} catch (error) {
-    debugmate.publish(error, request)
-}
-```
-### 3. Report Context Data
-If you want to send more information to the Debugmate:<br>
-- Create `debugmateContext.cjs` file in the root project and create the getUser and getEnvironment methods. These methods will be called by the Debugmate to get the data you want to send.
-- Add `DEBUGMATE_CONTEXT` to your .env file with the path of the appContext.js file.<br>
+const http = require('http');
+const Debugmate = require('debugmate');
 
-```js
-// file: debugmateContext.cjs
+const debugmate = new Debugmate({
+  domain: 'https://your-debugmate-domain.com',
+  token: 'your-api-token',
+  enabled: true,
+});
 
-function getUser() {
-    // Retrieve user data the way you want
-    const user = {
-        id: 1,
-        name: 'John Doe',
-        email: 'johndoe@email.com',
+const server = http.createServer((req, res) => {
+  let body = [];
+
+  req.on('data', (chunk) => body.push(chunk));
+  req.on('end', () => {
+    body = Buffer.concat(body).toString();
+
+    // Set request data in Debugmate
+    debugmate.setRequest({
+      url: req.url,
+      method: req.method,
+      headers: req.headers,
+      params: {}, // Parse query params if needed
+      body: body,
+    });
+
+    try {
+      if (req.url === '/error') {
+        throw new Error('Simulated error');
+      }
+      res.statusCode = 200;
+      res.end('Hello, World!');
+    } catch (error) {
+      debugmate.publish(error); // Publish error with request data
+      res.statusCode = 500;
+      res.end('Error captured and published!');
     }
+  });
+});
 
-    // Return the user data as an object to Debugmate
-    return user
-}
-
-function getEnvironment() {
-    const environment = {
-        environment: 'local',
-        debug: true,
-        timezone: 'UTC',
-        server: 'apache',
-        database: 'mysql 5.7',
-        npm: '6.13.4',
-    }
-
-    return environment
-}
-
-module.exports = { getUser, getEnvironment }
-
-```
-```.env
-// file: .env
-
-DEBUGMATE_CONTEXT=/path/root/project/debugmateContext.cjs
+server.listen(3000, () => {
+  console.log('Server running on http://localhost:3000/');
+});
 ```

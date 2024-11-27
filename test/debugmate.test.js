@@ -1,208 +1,118 @@
-process.env.DEBUGMATE_DOMAIN = 'http://debugmate-app.test'
-process.env.DEBUGMATE_TOKEN = 'token'
-process.env.DEBUGMATE_ENABLED = true
+const Debugmate = require('../debugmate');
 
-const { Context } = require('../context')
-const debugmate = require('../debugmate')
-const queryString = require('querystring')
-const appContext = require('./appContext')
+describe('Debugmate Tests', () => {
+    let debugmate;
 
-test('it should be able to send error', () => {
-    error = new Error('This is an error')
+    beforeEach(() => {
+        debugmate = new Debugmate({
+            domain: 'http://debugmate-app.test',
+            token: 'token',
+            enabled: true,
+        });
 
-    debugmate.publish(error)
+        jest.spyOn(debugmate, 'publish');
+    });
 
-    let payload = debugmate.payload(error)
+    afterEach(() => {
+        jest.clearAllMocks();
+        jest.restoreAllMocks();
+    });
 
-    expect(payload.message).toEqual(error.message)
-})
+    test('it should initialize Debugmate correctly', () => {
+        expect(debugmate.domain).toBe('http://debugmate-app.test');
+        expect(debugmate.token).toBe('token');
+        expect(debugmate.enabled).toBe(true);
+    });
 
-test('it should be able to send error and request', () => {
-    error = new Error('This is an error')
+    test('it should set user context', () => {
+        const user = { id: 1, name: 'John Doe', email: 'johndoe@email.com' };
+        debugmate.setUser(user);
 
-    request = {
-        url: '/api/v1/users',
-        method: 'GET',
-        params: {
-            "id": "3"
-        },
-        headers: {
-            "Content-Type": "application/x-www-form-urlencoded",
-            "Accept": "application/json",
-            "host": "localhost:8000"
-        },
-        query: "select * from users where id = 3",
-        body: ''
-    }
+        expect(debugmate.context.user).toEqual(user);
+    });
 
-    let context = new Context().setRequest(request)
-
-    debugmate.publish(error, request)
-
-    let payload = debugmate.payload(error, context)
-
-    expect(payload.message).toEqual(error.message)
-
-    expect(payload.request.request.url).toEqual(request.url)
-})
-
-test('it should be able to send context', () => {
-    error = new Error('This is an error')
-
-    let context = new Context()
-        .setError(error)
-        .setUser({
-            id: 1,
-            name: 'John Doe',
-            email: 'johndoe@email.com'
-        })
-        .setEnvironment({
+    test('it should set environment context', () => {
+        const environment = {
             environment: 'local',
-            debug: 'true',
-            timezone: process.env.TZ = 'UTC',
-            server: 'nginx',
-            database: 'mysql 5.7',
-            npm: '9.5.0'
-        })
-        .setRequest({
+            debug: true,
+            timezone: 'UTC',
+        };
+
+        debugmate.setEnvironment(environment);
+
+        expect(debugmate.context.environment).toEqual(environment);
+    });
+
+    test('it should set request context', () => {
+        const request = {
+            url: '/api/v1/users',
+            method: 'POST',
+            params: { id: '3' },
+            headers: { 'Content-Type': 'application/json' },
+        };
+
+        debugmate.setRequest(request);
+
+        expect(debugmate.context.request).toEqual(request);
+    });
+
+    test('it should publish an error with full context', () => {
+        const user = { id: 1, name: 'John Doe', email: 'johndoe@email.com' };
+        const environment = { environment: 'local', debug: true };
+        const request = {
             url: '/api/v1/users',
             method: 'GET',
-            params: {
-                "id": "3"
-            },
-            headers: {
-                "Content-Type": "application/x-www-form-urlencoded",
-                "Accept": "application/json",
-                "host": "localhost:8000"
-            },
-            query: "select * from users where id = 3",
-            body: ''
-        })
-        .setProcess({
-            platform: 'darwin',
-            version: 'v18.14.2'
-        })
+            params: { id: '3' },
+            headers: { 'Content-Type': 'application/json' },
+        };
 
-    debugmate.publish(error)
+        const error = new Error('Test Error');
+        debugmate.publish(error, user, environment, request);
 
-    let payload = debugmate.payload(error, context)
+        const payload = debugmate.payload(error);
 
-    expect(payload.message).toEqual(error.message)
-
-    expect(payload.user).toEqual({
-        id: 1,
-        name: 'John Doe',
-        email: 'johndoe@email.com'
-    })
-
-    expect(payload.environment).toEqual([
-        {
+        expect(payload.message).toBe(error.message);
+        expect(payload.user).toEqual(user);
+        expect(payload.environment).toContainEqual({
             group: 'Node',
-            variables: {version: 'v18.14.2'}},
-        {
-            group: 'App',
-            variables: {environment: 'local', debug: 'true', timezone: 'UTC'}
-        },
-        {
-            group: 'System',
-            variables: {
-                os: 'MacOS',
-                server: 'nginx',
-                database: 'mysql 5.7',
-                npm: '9.5.0'
-            }
-        }
-    ])
+            variables: { version: process.version },
+        });
+        expect(payload.request.request.url).toBe(request.url);
+    });
 
-    expect(payload.request).toEqual({
-        request: {
-            url: '/api/v1/users',
-            method: 'GET',
-            params: {
-                "id": "3"
-            }
-        },
-        headers: {
-            "Content-Type": "application/x-www-form-urlencoded",
-            "Accept": "application/json",
-            "host": "localhost:8000"
-        },
-        query_string: queryString.parse("select * from users where id = 3"),
-        body: ''
-    })
-})
+    test('it should set up global error handlers', () => {
+        const processOnSpy = jest.spyOn(process, 'on');
 
-test('it should be able to set appContext', () => {
-    error = new Error('This is an error')
+        debugmate.setupGlobalErrorHandling();
 
-    let context = new Context()
-        .setError(error)
-        .setUser(appContext.getUser())
-        .setEnvironment(appContext.getEnvironment())
-        .setRequest({
-            url: '/api/v1/users',
-            method: 'GET',
-            params: {
-                "id": "3"
-            },
-            headers: {
-                "Content-Type": "application/x-www-form-urlencoded",
-                "Accept": "application/json",
-                "host": "localhost:8000"
-            },
-            query: "select * from users where id = 3",
-            body: ''
-        })
-        .setProcess({
-            platform: 'darwin',
-            version: 'v18.14.2'
-        })
+        expect(processOnSpy).toHaveBeenCalledWith('uncaughtException', expect.any(Function));
+        expect(processOnSpy).toHaveBeenCalledWith('unhandledRejection', expect.any(Function));
+    });
 
-    debugmate.publish(error)
+    test('it should handle uncaught exceptions', () => {
+        debugmate.setupGlobalErrorHandling();
 
-    let payload = debugmate.payload(error, context)
+        const error = new Error('Test uncaught exception');
+        process.emit('uncaughtException', error);
 
-    expect(payload.message).toEqual(error.message)
+        expect(debugmate.publish).toHaveBeenCalledWith(error);
+    });
 
-    expect(payload.user).toEqual({
-        id: 1,
-        name: 'John test',
-        email: 'johndoe@email.com'
-    })
+    test('it should handle unhandled promise rejections', () => {
+        debugmate.setupGlobalErrorHandling();
 
-    expect(payload.environment).toEqual([
-        {
-            group: 'Node',
-            variables: {version: 'v18.14.2'}},
-        {
-            group: 'App',
-            variables: {environment: 'local', debug: true, timezone: 'UTC'}
-        },
-        {
-            group: 'System',
-            variables: {
-                os: 'MacOS',
-                server: 'apache',
-                database: 'mysql 5.7',
-                npm: '6.13.4'
-            }
-        }
-    ])
+        const rejectionError = new Error('Test unhandled rejection');
+        process.emit('unhandledRejection', rejectionError);
 
-    expect(payload.request).toEqual({
-        request: {
-            url: '/api/v1/users',
-            method: 'GET',
-            params: {
-                "id": "3"
-            }
-        },
-        headers: {
-            "Content-Type": "application/x-www-form-urlencoded",
-            "Accept": "application/json",
-            "host": "localhost:8000"
-        },
-        query_string: queryString.parse("select * from users where id = 3"),
-        body: ''
-    })
-})
+        expect(debugmate.publish).toHaveBeenCalledWith(rejectionError);
+
+        const rejectionReason = 'Some reason';
+        process.emit('unhandledRejection', rejectionReason);
+
+        expect(debugmate.publish).toHaveBeenCalledWith(
+            expect.objectContaining({
+                message: `Unhandled rejection: "${rejectionReason}"`,
+            })
+        );
+    });
+});

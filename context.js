@@ -1,47 +1,36 @@
-const queryString = require('querystring')
-
 class Context {
+    constructor() {
+        this.processInfo = process;
+        this.operatingSystem = this.checkOperationSystem();
+    }
 
     setError(error) {
-        this.error = error
-        return this
+        this.error = error;
     }
 
     setRequest(request) {
-        this.request = request
-        return this
+        this.request = request;
     }
 
     setUser(user) {
-        this.user = user
-        return this
+        if (!user || typeof user.id !== 'number' || typeof user.name !== 'string') {
+            throw new Error('Invalid user object');
+        }
+        this.user = user;
     }
 
     setEnvironment(environment) {
-        this.environment = environment
-        return this
-    }
-
-    setProcess(process) {
-        this.process = process
-        return this
-    }
-
-    get getProcess() {
-        return this.process || process
+        this.environment = environment;
     }
 
     checkOperationSystem() {
-        const osValue = this.getProcess.platform
-
-        let operationalSystem = {
-            'darwin': 'MacOS',
-            'win32': 'Windows',
-            'linux': 'Linux',
-            'android': 'Android',
-        }
-
-        return operationalSystem[osValue] || 'Unknown'
+        const osMapping = {
+            darwin: 'MacOS',
+            win32: 'Windows',
+            linux: 'Linux',
+            android: 'Android',
+        };
+        return osMapping[this.processInfo.platform] || 'Unknown';
     }
 
     payload() {
@@ -49,110 +38,110 @@ class Context {
             ...this.appUser(),
             ...this.appRequest(),
             ...this.appEnvironment(),
-        }
+        };
     }
 
     appUser() {
-        return this.user
-            ? {user: this.user}
-            : {}
+        return this.user ? { user: this.user } : {};
     }
 
     appRequest() {
-        if (this.request) {
+        if (!this.request) {
             return {
-                request : {
+                request: {
                     request: {
-                        url: this.request.baseUrl ? this.request.baseUrl : this.request.url,
-                        method: this.request.method,
-                        params: this.request.params,
+                        url: 'unknown',
+                        method: 'GET',
+                        params: {},
                     },
-                    headers: this.request.headers,
-                    query_string: this.error.sql
-                        ? queryString.parse(this.error.sql)
-                        : queryString.parse(this.request.query),
-                    body: this.request.body ? this.request.body : '',
-                }
-            }
+                    headers: {},
+                    query_string: {},
+                    body: '',
+                },
+            };
         }
 
-        return {}
+        const url = this.request.url || 'unknown';
+        const queryParams = this.getQueryParams();
+
+        return {
+            request: {
+                request: {
+                    url: url,
+                    method: this.request.method || 'GET',
+                    params: this.request.params || {},
+                },
+                headers: this.request.headers || {},
+                query_string: queryParams,
+                body: this.request.body || '',
+            },
+        };
+    }
+
+    getQueryParams() {
+        if (!this.request?.url || !this.request?.headers?.host) {
+            return {};
+        }
+
+        try {
+            const urlObj = new URL(this.request.url, `http://${this.request.headers.host}`);
+            const params = {};
+            for (const [key, value] of urlObj.searchParams.entries()) {
+                params[key] = value;
+            }
+            return params;
+        } catch (err) {
+            console.error('Error parsing query string:', err.message);
+            return {};
+        }
     }
 
     appEnvironment() {
-        let nodeContext = {}
-
-        if (this.getProcess.version) {
-            nodeContext = {
-                group: 'Node',
-                variables: {
-                    version: this.getProcess.version,
-                }
-            }
-        }
-
-        let environmentVariables = {}
-
-        if (this.environment?.environment) {
-            Object.assign(environmentVariables, {environment: this.environment.environment})
-        }
-
-        if (this.environment?.debug) {
-            Object.assign(environmentVariables, {debug: this.environment.debug})
-        }
-
-        if (this.environment?.timezone) {
-            Object.assign(environmentVariables, {timezone: this.environment.timezone})
-        }
-
-        let environmentContext = {}
-
-        if (Object.keys(environmentVariables).length > 0) {
-            environmentContext = {
-                group: 'App',
-                variables: environmentVariables,
-            }
-        }
-
-        let systemVariables = {}
-
-        const operationSystem = this.checkOperationSystem()
-
-        if (operationSystem) {
-            Object.assign(systemVariables, {os: operationSystem})
-        }
-
-        if (this.environment?.server) {
-            Object.assign(systemVariables, {server: this.environment.server})
-        }
-
-        if (this.environment?.database) {
-            Object.assign(systemVariables, {database: this.environment.database})
-        }
-
-        if (this.environment?.npm) {
-            Object.assign(systemVariables, {npm: this.environment.npm})
-        }
-
-        const browser = this.request?.headers ? this.request?.headers['user-agent'] : ''
-
-        if (browser) {
-            Object.assign(systemVariables, {browser})
-        }
-
-        let systemContext =  {
-            group: 'System',
-            variables: systemVariables,
-        }
-
         return {
-            environment: this.filterKeys([nodeContext, environmentContext, systemContext])
+            environment: this.filterKeys([
+                this.nodeContext(),
+                this.appEnvironmentVariables(),
+                this.systemContext(),
+            ]),
+        };
+    }
+
+    nodeContext() {
+        return this.processInfo.version
+            ? { group: 'Node', variables: { version: this.processInfo.version } }
+            : {};
+    }
+
+    appEnvironmentVariables() {
+        const vars = {};
+        this.addIfDefined(vars, 'environment', this.environment?.environment);
+        this.addIfDefined(vars, 'debug', this.environment?.debug);
+        this.addIfDefined(vars, 'timezone', this.environment?.timezone);
+
+        return Object.keys(vars).length ? { group: 'App', variables: vars } : {};
+    }
+
+    systemContext() {
+        const vars = {
+            os: this.operatingSystem,
+            server: this.environment?.server,
+            database: this.environment?.database,
+            npm: this.environment?.npm,
+            browser: this.request?.headers?.['user-agent'],
+        };
+
+        return { group: 'System', variables: vars };
+    }
+
+    addIfDefined(target, key, value) {
+        if (value !== undefined) {
+            target[key] = value;
         }
     }
 
     filterKeys(array) {
-        return array.filter(value => Object.keys(value).length !== 0)
+        return array.filter((item) => Object.keys(item).length > 0);
     }
 }
 
-module.exports.Context = Context
+module.exports.Context = Context;
