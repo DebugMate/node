@@ -1,25 +1,28 @@
 {
-  "name": "devsquad-cockpit",
+  "name": "@debugmate/nodejs",
   "version": "1.0.0",
-  "description": "",
-  "main": "devsquadCockpit.js",
+  "description": "DebugMate: An error tracking library for Node application",
+  "main": "debugmate.js",
   "scripts": {
     "test": "jest"
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/devsquad-cockpit/node.git"
+    "url": "git+https://github.com/Debugmate/node.git"
   },
   "author": "",
   "license": "ISC",
   "bugs": {
-    "url": "https://github.com/devsquad-cockpit/node/issues"
+    "url": "https://github.com/Debugmate/node/issues"
   },
-  "homepage": "https://github.com/devsquad-cockpit/node#readme",
+  "homepage": "https://github.com/Debugmate/node#readme",
   "devDependencies": {
     "jest": "^29.5.0"
   },
   "dependencies": {
     "dotenv": "^16.0.3"
+  },
+  "jest": {
+    "detectOpenHandles": true
   }
 }
