@@ -1,3 +1,31 @@
+/**
+ * @typedef {Object} User
+ * @property {number} id - The ID of the user.
+ * @property {string} name - The name of the user.
+ * @property {string} email - The email of the user.
+ */
+
+/**
+ * @typedef {Object} Environment
+ * @property {string} environment - The current environment (e.g., development, production).
+ * @property {boolean} debug - Whether debug mode is enabled.
+ * @property {string} timezone - The current timezone.
+ * @property {string} server - The server identifier.
+ * @property {string} database - The database name or identifier.
+ * @property {string} npm - The npm version used in the environment.
+ */
+
+/**
+ * @typedef {Object} Request
+ * @property {Object} request - Request details.
+ * @property {string} request.url - The URL of the request.
+ * @property {string} request.method - The HTTP method of the request.
+ * @property {Object} request.params - Request parameters.
+ * @property {Object} headers - Headers included in the request.
+ * @property {Object} query_string - Query string parameters.
+ * @property {string} body - The request body content.
+ */
+
 const http = require('http');
 const https = require('https');
 const { Context } = require('./context');
@@ -6,6 +34,13 @@ const fs = require('fs');
 class Debugmate {
     static instance = null;
 
+    /**
+     * Creates a Debugmate instance with specified options.
+     * @param {Object} options - Configuration options for Debugmate.
+     * @param {string} options.domain - The API domain for error reporting.
+     * @param {string} options.token - The authentication token for API requests.
+     * @param {boolean} options.enabled - Flag to enable or disable error reporting.
+     */
     constructor(options = {}) {
         if (!Debugmate.instance) {
             this.domain = options.domain;
@@ -19,20 +54,34 @@ class Debugmate {
         return Debugmate.instance;
     }
 
+    /**
+     * Set the current user information (id, name, email).
+     * @param {User} user - User details to include in the context.
+     */
     setUser(user) {
         this.context.setUser(user);
     }
 
+    /**
+     * Set the current environment information (environment, debug, timezone, server, database, npm).
+     * @param {Environment} environment - Environment details to include in the context.
+     */
     setEnvironment(environment) {
         this.context.setEnvironment(environment);
     }
 
+    /**
+     * Set the current request information (request, headers, query_string, body).
+     * @param {Request} request - Request details to include in the context.
+     */
     setRequest(request) {
         this.context.setRequest(request);
     }
 
+    /**
+     * Sets up global error handling for uncaught exceptions and unhandled promise rejections.
+     */
     setupGlobalErrorHandling() {
-
         process.on('uncaughtException', (error) => {
             this.publish(error);
         });
@@ -42,12 +91,18 @@ class Debugmate {
                 reason instanceof Error
                     ? reason
                     : new Error(`Unhandled rejection: ${JSON.stringify(reason)}`);
-
+                    
             this.publish(error);
         });
-
     }
 
+    /**
+     * Publishes an error to the Debugmate API.
+     * @param {Error} error - The error object to report.
+     * @param {User|null} userContext - Optional user context to include.
+     * @param {Environment|null} environmentContext - Optional environment context to include.
+     * @param {Request|null} request - Optional request context to include.
+     */
     publish(error, userContext = null, environmentContext = null, request = null) {
         try {
             if (!this.isPublishingAllowed(error)) return;
@@ -93,6 +148,11 @@ class Debugmate {
         }
     }
 
+    /**
+     * Determines whether error publishing is allowed based on configuration.
+     * @param {Error} error - The error object to check.
+     * @returns {boolean} - Whether publishing is allowed.
+     */
     isPublishingAllowed(error) {
         if (!error || this.enabled === false || !this.domain || !this.token) {
             console.warn('Error not published to Debugmate. Check configuration or the error.');
@@ -101,6 +161,12 @@ class Debugmate {
         return true;
     }
 
+    /**
+     * Constructs the payload for error reporting.
+     * @param {Error} error - The error object to include in the payload.
+     * @param {Object} context - Additional context to include in the payload.
+     * @returns {Object} - The payload for error reporting.
+     */
     payload(error, context) {
         const trace = this.trace(error);
 
@@ -114,20 +180,24 @@ class Debugmate {
         };
     }
 
-
+    /**
+     * Extracts the stack trace from an error.
+     * @param {Error} error - The error object to parse.
+     * @returns {Array<Object>} - The parsed stack trace.
+     */
     trace(error) {
         const stackTrace = require('./stackTraceParser').parse(error);
-    
+
         if (!stackTrace.sources || stackTrace.sources.length === 0) {
             return [];
         }
-    
+
         const ignoredPatterns = [
             '/debugmate.js',
             '/node_modules/',
             'node:internal',
         ];
-    
+
         return stackTrace.sources
             .filter((source) => {
                 if (!source.file) return true;
@@ -136,17 +206,17 @@ class Debugmate {
             .map((source) => {
                 let codePreview = {};
                 let errorLine = source.line || null;
-    
+
                 if (!source.file || source.file.startsWith('node:internal')) {
                     codePreview = { "1": "(Internal Node.js file - no preview available)" };
                 } else if (source.file && errorLine) {
                     try {
                         const fileContent = fs.readFileSync(source.file, 'utf-8');
                         const lines = fileContent.split('\n');
-    
+
                         const startLine = Math.max(0, errorLine - 5);
                         const endLine = Math.min(lines.length, errorLine + 5);
-    
+
                         for (let i = startLine; i <= endLine; i++) {
                             codePreview[i + 1] = lines[i] || null;
                         }
@@ -156,7 +226,7 @@ class Debugmate {
                 } else {
                     codePreview = { "1": "(No file or line information available)" };
                 }
-    
+
                 return {
                     file: source.file,
                     line: source.line,
@@ -167,7 +237,6 @@ class Debugmate {
                 };
             });
     }
-
 }
 
 module.exports = Debugmate;
