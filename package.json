@@ -1,11 +1,20 @@
 {
   "name": "@debugmate/nodejs",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "DebugMate: An error tracking library for Node application",
   "main": "debugmate.js",
   "scripts": {
     "test": "jest"
   },
+  "keywords": [
+    "error-tracking",
+    "debugmate",
+    "node",
+    "monitoring",
+    "error-handling",
+    "debugging",
+    "javascript"
+  ],
   "repository": {
     "type": "git",
     "url": "git+https://github.com/Debugmate/node.git"
