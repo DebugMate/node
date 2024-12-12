@@ -22,26 +22,18 @@ const newDebugmate = new Debugmate({
 
 ## Installation
 
+### Install DebugMate
 
-To install DebugMate for Node.js, you can add it as a local dependency while in development:
-```json
-file: package.json
-
-"dependencies": {
-    "debugmate": "file:<place-here-you-clone-the-repo>"
-}
-```
-
-Then install the package:
 ```bash
-npm install
+npm i @debugmate/nodejs
 ```
 ## Usage
+
 ### Basic Setup
 To get started with DebugMate, initialize it with your API domain and token. This allows DebugMate to send error reports to your server.
 
 ```js
-const Debugmate = require('debugmate');
+const Debugmate = require('@debugmate/nodejs');
 
 const debugmate = new Debugmate({
   domain: "https://your-domain.com",
@@ -160,7 +152,7 @@ Here’s how you can integrate DebugMate into a Node.js HTTP server:
 
 ```js
 const http = require('http');
-const Debugmate = require('debugmate');
+const Debugmate = require('@debugmate/nodejs');
 
 const debugmate = new Debugmate({
   domain: 'https://your-debugmate-domain.com',
