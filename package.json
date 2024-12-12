@@ -1,7 +1,7 @@
 {
-  "name": "debugmate",
+  "name": "@debugmate/nodejs",
   "version": "1.0.0",
-  "description": "",
+  "description": "DebugMate: An error tracking library for Node application",
   "main": "debugmate.js",
   "scripts": {
     "test": "jest"
